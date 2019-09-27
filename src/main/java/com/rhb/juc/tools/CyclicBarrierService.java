@@ -3,6 +3,7 @@ package com.rhb.juc.tools;
 import java.util.Map;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -15,6 +16,10 @@ import java.util.concurrent.Executors;
  * 
  * 结果： new CyclicBarrier(parties,Runnable)方法
  * 		当所有线程到达屏障，且执行完毕后，再执行Runnable线程
+ * 
+ * CountDownLatch和CyclicBarrier比较：
+ * 		1. CountDownLatch是阻塞单个线程，CyclicBarrier阻塞一组线程。
+ * 		2. CountDownLatch是减法算法，CyclicBarrier是加法算法
  */
 public class CyclicBarrierService implements Runnable{
 
@@ -25,10 +30,17 @@ public class CyclicBarrierService implements Runnable{
 	private Executor exe = Executors.newFixedThreadPool(1);
 	
 	//限定个数的可循环屏障
-	private final CyclicBarrier cyclicBarrier = new CyclicBarrier(10);
+	private final CyclicBarrier cyclicBarrier = new CyclicBarrier(10,this);
+	
+	//限定主程序的执行时间
+	private CountDownLatch countDownLatch = new CountDownLatch(10);
 
 	public CyclicBarrier getCb() {
 		return this.cyclicBarrier;
+	}
+	
+	public CountDownLatch getCdl() {
+		return this.countDownLatch;
 	}
 	
 	/**
@@ -50,9 +62,8 @@ public class CyclicBarrierService implements Runnable{
 	 */
 	public void countSheel() {
 		for (int i = 0; i < 10; i++) {
-			System.out.println(i);
 			//每个线程都是新的对象，不会出现并发问题
-			exe.execute(new Runnable() {
+			new Thread(new Runnable() {
 				@Override
 				public void run() {
 					try {
@@ -62,18 +73,23 @@ public class CyclicBarrierService implements Runnable{
 						System.out.println("sheel计算结果完成！-"+Thread.currentThread().getName());
 						cyclicBarrier.await();
 						System.out.println("屏障解除："+Thread.currentThread().getName());
+						countDownLatch.countDown();
 					} catch (InterruptedException | BrokenBarrierException e) {
 						e.printStackTrace();
 					}
 				}
-			});
+			}).start();
 		}
 	}
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws InterruptedException, BrokenBarrierException {
 		CyclicBarrierService service = new CyclicBarrierService();
 		service.countSheel();
-		System.out.println("Main Over");
+		CountDownLatch countDownLatch = service.getCdl();
+		countDownLatch.await();
+		CyclicBarrier barrier = service.getCb();
+		System.out.println(Thread.currentThread().getName()+"-阻塞线程数:"+barrier.getNumberWaiting());
+		System.out.println("Process Over!");
 	}
 	
 }
