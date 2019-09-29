@@ -3,6 +3,7 @@ package com.rhb.juc.base;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 
@@ -36,10 +37,10 @@ public class SimpleCallable {
 		FutureTask<String> task1 = new FutureTask<>(new SimpleCallable().new Callable1());
 		FutureTask<String> task2 = new FutureTask<>(new SimpleCallable().new Callable2());
 		
-		Executor executor = Executors.newFixedThreadPool(2);
+		ExecutorService executor = Executors.newFixedThreadPool(2);
 		executor.execute(task1);
 		executor.execute(task2);
-		
+		executor.shutdown();
 		System.out.println("task1:"+task1.get()+",task2:"+task2.get());
 	}
 	
